@@ -69,8 +69,8 @@ PORT           = int(os.getenv("PORT", 8000))
 # ═══════════════════════════════════════════════
 #                  CONSTANTS
 # ═══════════════════════════════════════════════
-GAP_SECONDS  = 60
-LINK_REGEX   = r"https://t.me/(c/)?([\w\d_]+)/(\d+)"
+GAP_SECONDS = 60
+LINK_REGEX  = r"https://t.me/(c/)?([\w\d_]+)/(\d+)"
 
 # ═══════════════════════════════════════════════
 #              CONVERSATION STATES
@@ -92,8 +92,7 @@ async def safe_edit(msg, text, retries=3, parse_mode="Markdown"):
             await msg.edit_text(text, parse_mode=parse_mode)
             return
         except Exception as e:
-            err = str(e)
-            if "Message is not modified" in err:
+            if "Message is not modified" in str(e):
                 return
             logger.warning(f"safe_edit attempt {attempt+1}/{retries} failed: {e}")
             if attempt < retries - 1:
@@ -160,11 +159,9 @@ async def start_userbot():
     await userbot.connect()
     if not await userbot.is_user_authorized():
         logger.error("❌ SESSION_STRING invalid ya expire ho gayi!")
-        raise SystemExit("SESSION_STRING kaam nahi kar rahi. generate_session.py se naya string lo.")
+        raise SystemExit("SESSION_STRING kaam nahi kar rahi.")
     me = await userbot.get_me()
     logger.info(f"UserBot logged in as: {me.first_name} (@{me.username}) [ID: {me.id}]")
-
-    logger.info(f"TARGET_CHANNEL validating: {TARGET_CHANNEL}")
     try:
         entity = await userbot.get_entity(TARGET_CHANNEL)
         logger.info(f"TARGET_CHANNEL OK: {entity.title} ✅")
@@ -180,9 +177,9 @@ def parse_link(link: str):
     if not match:
         return None, None
     is_private = match.group(1)
-    chat = match.group(2)
-    msg_id = int(match.group(3))
-    chat_id = int("-100" + chat) if is_private else chat
+    chat       = match.group(2)
+    msg_id     = int(match.group(3))
+    chat_id    = int("-100" + chat) if is_private else chat
     return chat_id, msg_id
 
 # ═══════════════════════════════════════════════
@@ -217,13 +214,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     task_text = ""
     if task:
         remaining = task["last_id"] - task["current_id"] + 1
-        done = task["current_id"] - task["first_id"]
-        total = task["last_id"] - task["first_id"] + 1
+        done      = task["current_id"] - task["first_id"]
+        total     = task["last_id"] - task["first_id"] + 1
         task_text = (
             f"\n\n📌 *Active Task:*\n"
             f"📺 Channel: `{task.get('chat_title', 'Unknown')}`\n"
             f"🔲 Remaining: `{remaining}/{total}`\n"
-            f"Done: `{done}/{total}`"
+            f"✅ Done: `{done}/{total}`"
         )
     await update.message.reply_text(
         "👋 *Telegram Media Bot*\n\n"
@@ -243,10 +240,10 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Koi active task nahi hai.")
         return
     remaining = task["last_id"] - task["current_id"] + 1
-    done = task["current_id"] - task["first_id"]
-    total = task["last_id"] - task["first_id"] + 1
-    percent = (done / total * 100) if total > 0 else 0
-    bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+    done      = task["current_id"] - task["first_id"]
+    total     = task["last_id"] - task["first_id"] + 1
+    percent   = (done / total * 100) if total > 0 else 0
+    bar       = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
     status_icon = "🟢 Running" if is_running else "⏸ Paused"
     await update.message.reply_text(
         f"📊 *Task Status*\n\n"
@@ -270,8 +267,8 @@ async def cmd_copy_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     task = await db_get_task()
     if task:
         remaining = task["last_id"] - task["current_id"] + 1
-        done = task["current_id"] - task["first_id"]
-        total = task["last_id"] - task["first_id"] + 1
+        done      = task["current_id"] - task["first_id"]
+        total     = task["last_id"] - task["first_id"] + 1
         await update.message.reply_text(
             f"⚠️ *Pichla task abhi complete nahi hua!*\n\n"
             f"📺 Channel: `{task.get('chat_title', 'Unknown')}`\n"
@@ -298,7 +295,7 @@ async def receive_first_link(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not chat_id:
         await update.message.reply_text("❌ Invalid link, dobara bhejo:")
         return WAIT_FIRST_LINK
-    context.user_data["dl_chat_id"] = chat_id
+    context.user_data["dl_chat_id"]  = chat_id
     context.user_data["dl_first_id"] = msg_id
     logger.info(f"First link — chat: {chat_id}, msg_id: {msg_id}")
     await update.message.reply_text(
@@ -324,7 +321,7 @@ async def receive_last_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Last ID, First ID se chota nahi ho sakta!")
         return ConversationHandler.END
     try:
-        entity = await userbot.get_entity(chat_id)
+        entity     = await userbot.get_entity(chat_id)
         chat_title = entity.title
     except Exception:
         chat_title = str(chat_id)
@@ -380,11 +377,11 @@ async def process_range(update: Update, progress_msg):
     logger.info(f"process_range — {task['chat_title']}: {start_from}→{last_id}")
 
     def build_progress_text(cur_id):
-        done = cur_id - first_id
+        done    = cur_id - first_id
         percent = (done / total * 100) if total > 0 else 0
-        bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+        bar     = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
         elapsed = max((datetime.now() - start_time).seconds, 1)
-        eta = int((elapsed / done) * (total - done)) if done > 0 else 0
+        eta     = int((elapsed / done) * (total - done)) if done > 0 else 0
         eta_str = f"{eta // 60}m {eta % 60}s" if eta > 0 else "calculating..."
         return (
             f"📊 *Progress — {task['chat_title']}*\n\n"
@@ -398,7 +395,6 @@ async def process_range(update: Update, progress_msg):
     for msg_id in range(start_from, last_id + 1):
         current_msg_id = msg_id
 
-        # Save progress
         await db_save_task({
             "current_id": msg_id,
             "copied": copied, "skipped": skipped, "failed": failed,
@@ -407,20 +403,25 @@ async def process_range(update: Update, progress_msg):
 
         try:
             msg = await userbot.get_messages(chat_id, ids=msg_id)
+
             if not msg or not msg.media:
                 skipped += 1
                 logger.debug(f"MSG ID {msg_id} — skipped (no media)")
             else:
-                chat_entity = await userbot.get_entity(chat_id)
+                chat_entity   = await userbot.get_entity(chat_id)
                 is_restricted = getattr(chat_entity, "noforwards", False) or msg.noforwards
+
                 if is_restricted:
                     skipped += 1
                     logger.info(f"MSG ID {msg_id} — skipped (restricted channel)")
                 else:
                     try:
-                        await userbot.send_file(TARGET_CHANNEL, msg.media, caption=None)
+                        # Message object pass karne se:
+                        # ✅ Caption same rahti hai
+                        # ✅ "Forwarded from" tag nahi lagta
+                        await userbot.send_message(TARGET_CHANNEL, msg)
                         copied += 1
-                        logger.info(f"MSG ID {msg_id} — copied ✅")
+                        logger.info(f"MSG ID {msg_id} — copied (no forward tag) ✅")
                         await asyncio.sleep(GAP_SECONDS)
                     except ChatForwardsRestrictedError:
                         skipped += 1
@@ -438,18 +439,17 @@ async def process_range(update: Update, progress_msg):
             logger.error(f"MSG ID {msg_id} — error: {e}", exc_info=True)
 
         # Update progress every 10 IDs
-        done_so_far = msg_id - first_id + 1
-        if done_so_far % 10 == 0:
+        if (msg_id - first_id + 1) % 10 == 0:
             try:
                 await safe_edit(progress_msg, build_progress_text(msg_id + 1))
             except Exception:
                 pass
 
     # Complete
-    elapsed = (datetime.now() - start_time).seconds
+    elapsed     = (datetime.now() - start_time).seconds
     elapsed_str = f"{elapsed // 60}m {elapsed % 60}s"
     await db_clear_task()
-    is_running = False
+    is_running     = False
     current_msg_id = None
     logger.info(
         f"process_range COMPLETE — copied: {copied}, "
@@ -506,8 +506,10 @@ def main():
             WAIT_LAST_LINK:  [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_last_link)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
     )
     app.add_handler(conv_handler)
+    app.add_handler(CommandHandler("cancel", cancel))
     app.add_error_handler(error_handler)
 
     logger.info("✅ Bot polling started")
