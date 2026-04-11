@@ -10,6 +10,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.errors import FloodWaitError, ChatForwardsRestrictedError
+from telethon.tl.types import (
+    MessageMediaDocument,
+    DocumentAttributeVideo,
+    DocumentAttributeAnimated
+)
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -63,7 +68,7 @@ BOT_TOKEN      = os.getenv("BOT_TOKEN")
 OWNER_ID       = int(os.getenv("OWNER_ID"))
 TARGET_CHANNEL = int(os.getenv("TARGET_CHANNEL"))
 MONGO_URI      = os.getenv("MONGO_URI")
-MONGO_DB       = os.getenv("MONGO_DB")
+MONGO_DB       = os.getenv("MONGO_DB", "tgbot")
 PORT           = int(os.getenv("PORT", 8000))
 
 # ═══════════════════════════════════════════════
@@ -82,6 +87,39 @@ WAIT_FIRST_LINK, WAIT_LAST_LINK = range(2)
 # ═══════════════════════════════════════════════
 is_running     = False
 current_msg_id = None
+
+# ═══════════════════════════════════════════════
+#         MEDIA TYPE FILTER
+# ═══════════════════════════════════════════════
+def is_video_or_document(msg) -> bool:
+    """
+    True  → Video ya Document   → Process karo
+    False → Image, GIF, Audio,
+            Sticker, ya kuch aur → Skip karo
+    """
+    # Sirf MessageMediaDocument allow hai
+    # (Photos, Polls, Geo etc. yahan nahi aate)
+    if not msg.media or not isinstance(msg.media, MessageMediaDocument):
+        return False
+
+    doc   = msg.media.document
+    attrs = doc.attributes
+
+    # Animated GIF → skip
+    if any(isinstance(a, DocumentAttributeAnimated) for a in attrs):
+        return False
+
+    # Video → process
+    if any(isinstance(a, DocumentAttributeVideo) for a in attrs):
+        return True
+
+    # Document (application/*, text/*, etc.) → process
+    mime = doc.mime_type or ""
+    if mime.startswith("application/") or mime.startswith("text/"):
+        return True
+
+    # Baaki sab (audio/*, image/*, sticker etc.) → skip
+    return False
 
 # ═══════════════════════════════════════════════
 #         SAFE TELEGRAM SEND/EDIT HELPERS
@@ -404,9 +442,11 @@ async def process_range(update: Update, progress_msg):
         try:
             msg = await userbot.get_messages(chat_id, ids=msg_id)
 
-            if not msg or not msg.media:
+            # ── Media type filter ──────────────────────────
+            if not msg or not is_video_or_document(msg):
                 skipped += 1
-                logger.debug(f"MSG ID {msg_id} — skipped (no media)")
+                logger.debug(f"MSG ID {msg_id} — skipped (not video/document)")
+            # ── Restricted channel check ───────────────────
             else:
                 chat_entity   = await userbot.get_entity(chat_id)
                 is_restricted = getattr(chat_entity, "noforwards", False) or msg.noforwards
@@ -416,12 +456,10 @@ async def process_range(update: Update, progress_msg):
                     logger.info(f"MSG ID {msg_id} — skipped (restricted channel)")
                 else:
                     try:
-                        # Message object pass karne se:
-                        # ✅ Caption same rahti hai
-                        # ✅ "Forwarded from" tag nahi lagta
+                        # Caption same rahti hai, "Forwarded from" tag nahi lagta
                         await userbot.send_message(TARGET_CHANNEL, msg)
                         copied += 1
-                        logger.info(f"MSG ID {msg_id} — copied (no forward tag) ✅")
+                        logger.info(f"MSG ID {msg_id} — copied ✅")
                         await asyncio.sleep(GAP_SECONDS)
                     except ChatForwardsRestrictedError:
                         skipped += 1
