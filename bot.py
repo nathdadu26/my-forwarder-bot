@@ -63,7 +63,7 @@ BOT_TOKEN      = os.getenv("BOT_TOKEN")
 OWNER_ID       = int(os.getenv("OWNER_ID"))
 TARGET_CHANNEL = int(os.getenv("TARGET_CHANNEL"))
 MONGO_URI      = os.getenv("MONGO_URI")
-MONGO_DB       = os.getenv("MONGO_DB", "tgbot")
+MONGO_DB       = os.getenv("MONGO_DB")
 PORT           = int(os.getenv("PORT", 8000))
 
 # ═══════════════════════════════════════════════
